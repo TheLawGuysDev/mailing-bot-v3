@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Good Bot – Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    *{box-sizing:border-box;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    body{
+      margin:0;padding:0;background:#111827;color:#f9fafb;
+      display:flex;min-height:100vh;align-items:center;justify-content:center
+    }
+    .card{
+      background:#0b1220;border-radius:16px;padding:24px 20px 20px;
+      width:100%;max-width:390px;box-shadow:0 20px 40px rgba(0,0,0,.45);
+      border:1px solid #1f2937
+    }
+    h1{margin:0 0 4px;font-size:1.25rem}
+    .subtitle{margin:0 0 16px;font-size:.85rem;color:#9ca3af;line-height:1.35}
+    label{display:block;font-size:.8rem;margin-bottom:4px;color:#d1d5db}
+    input{
+      width:100%;border-radius:999px;border:1px solid #4b5563;
+      padding:9px 12px;font-size:.86rem;background:#020617;color:#f9fafb;outline:none
+    }
+    input:focus{border-color:#2563eb;box-shadow:0 0 0 1px #2563eb33}
+    .btn{
+      width:100%;margin-top:10px;padding:9px 12px;border-radius:999px;border:none;
+      background:#2563eb;color:#f9fafb;font-weight:800;font-size:.92rem;cursor:pointer
+    }
+    .btn:hover{background:#1d4ed8}
+    .btn-secondary{background:#374151}
+    .btn-secondary:hover{background:#4b5563}
+    .status{font-size:.8rem;margin-top:10px;min-height:1.1em;line-height:1.25}
+    .status.error span{color:#fca5a5;font-weight:800}
+    .status.info span{color:#93c5fd;font-weight:800}
+    .status.ok span{color:#6ee7b7;font-weight:800}
+    .helper-text{margin-top:8px;font-size:.75rem;color:#9ca3af;line-height:1.35}
+    .step-title{font-size:.8rem;color:#9ca3af;margin-bottom:8px}
+    .hidden{display:none}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Sign in</h1>
+    <p class="subtitle">Access Good Bot with your work account.</p>
+
+    <div id="step-email">
+      <div class="step-title">Step 1 of 2 · Enter your email</div>
+      <form id="emailForm">
+        <label for="email">Work email</label>
+        <input type="email" id="email" required placeholder="you@company.com" autocomplete="username" />
+        <button type="submit" class="btn">Continue</button>
+      </form>
+      <div class="helper-text">If you don’t have an account yet, ask an admin to invite you.</div>
+      <div id="emailStatus" class="status"></div>
+    </div>
+
+    <div id="step-password" class="hidden">
+      <div class="step-title">Step 2 of 2 · Enter your password</div>
+      <form id="passwordForm">
+        <label for="password">Password</label>
+        <input type="password" id="password" required placeholder="Enter your password" autocomplete="current-password" />
+        <button type="submit" class="btn">Sign in</button>
+        <button type="button" id="backToEmailBtn" class="btn btn-secondary" style="margin-top:8px;">Back</button>
+      </form>
+      <div class="helper-text" id="passwordHelper">
+        If this is your first login or your password was reset, use the temporary password your admin gave you.
+      </div>
+      <div id="passwordStatus" class="status"></div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = "";
+
+
+    const emailStep = document.getElementById("step-email");
+    const passwordStep = document.getElementById("step-password");
+    const emailForm = document.getElementById("emailForm");
+    const passwordForm = document.getElementById("passwordForm");
+    const emailInput = document.getElementById("email");
+    const passwordInput = document.getElementById("password");
+    const emailStatus = document.getElementById("emailStatus");
+    const passwordStatus = document.getElementById("passwordStatus");
+    const backToEmailBtn = document.getElementById("backToEmailBtn");
+    const passwordHelper = document.getElementById("passwordHelper");
+
+    let selectedEmail = null;
+    let emailMustChangePassword = false;
+    let emailRole = null;
+
+    function showStatus(el, type, msg) {
+      el.className = "status " + (type || "");
+      el.innerHTML = msg ? `<span>${msg}</span>` : "";
+    }
+    function gotoEmailStep() {
+      passwordStep.classList.add("hidden");
+      emailStep.classList.remove("hidden");
+      passwordInput.value = "";
+      showStatus(passwordStatus, "", "");
+      emailInput.focus();
+    }
+    function gotoPasswordStep() {
+      emailStep.classList.add("hidden");
+      passwordStep.classList.remove("hidden");
+      passwordInput.focus();
+    }
+
+    emailForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = emailInput.value.trim();
+      if (!email) return;
+
+      showStatus(emailStatus, "info", "Checking email…");
+
+      try {
+        const res = await fetch(`${API_BASE}/auth/check_email?email=${encodeURIComponent(email)}`);
+        if (!res.ok) {
+          showStatus(emailStatus, "error", "Error checking email.");
+          return;
+        }
+        const data = await res.json();
+
+        if (!data.exists) {
+          showStatus(emailStatus, "error", "This email is not registered. Ask an admin to invite you.");
+          return;
+        }
+        if (data.is_active === false) {
+          showStatus(emailStatus, "error", "This account is disabled. Contact an admin.");
+          return;
+        }
+
+        selectedEmail = email;
+        emailMustChangePassword = !!data.must_change_password;
+        emailRole = data.role || null;
+
+        showStatus(emailStatus, "ok", "Email found. Please enter your password.");
+        passwordHelper.textContent = emailMustChangePassword
+          ? "Your account is flagged to change password. Use the temporary password your admin gave you. After signing in, you’ll be required to set a new password."
+          : "Enter your password to sign in.";
+
+        gotoPasswordStep();
+      } catch (err) {
+        console.error(err);
+        showStatus(emailStatus, "error", "Network error while checking email.");
+      }
+    });
+
+    backToEmailBtn.addEventListener("click", () => {
+      selectedEmail = null;
+      emailMustChangePassword = false;
+      emailRole = null;
+      gotoEmailStep();
+    });
+
+    passwordForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!selectedEmail) {
+        showStatus(passwordStatus, "error", "Please enter your email first.");
+        gotoEmailStep();
+        return;
+      }
+
+      const password = passwordInput.value;
+      if (!password) return;
+
+      showStatus(passwordStatus, "info", "Signing in…");
+
+      try {
+        const body = new URLSearchParams();
+        body.append("username", selectedEmail);
+        body.append("password", password);
+
+        const res = await fetch(`${API_BASE}/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body,
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          showStatus(passwordStatus, "error", data.detail || "Invalid email or password.");
+          return;
+        }
+
+        const accessToken = data.access_token;
+        const tokenType = data.token_type || "Bearer";
+        const mustChange = !!data.must_change_password;
+        const role = data.role || emailRole || "user";
+
+        // keep in sync with backend token expiry
+        const expiresAt = Date.now() + 1000 * 60 * 60 * 4;
+
+        localStorage.setItem("accessToken", accessToken);
+        localStorage.setItem("tokenType", tokenType);
+        localStorage.setItem("accessTokenExpiry", String(expiresAt));
+        localStorage.setItem("userRole", role);
+        localStorage.setItem("mustChangePassword", String(mustChange));
+
+        showStatus(passwordStatus, "ok", "Signed in.");
+
+        if (mustChange) {
+          window.location.href = "/change-password";
+        } else {
+          if (role === "admin") window.location.href = "/admin";
+          else if (role === "manager") window.location.href = "/manager";
+          else window.location.href = "/dashboard";
+        }
+      } catch (err) {
+        console.error(err);
+        showStatus(passwordStatus, "error", "Network error while signing in.");
+      }
+    });
+  </script>
+</body>
+</html>

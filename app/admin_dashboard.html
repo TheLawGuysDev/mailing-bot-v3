@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Good Bot – Admin & Manager Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --navy: #0b1830;
+      --navy-2: #0f223f;
+      --bg: #f3f4f6;
+      --card: #ffffff;
+
+      --text: #111827;
+      --muted: #6b7280;
+      --muted-2: #9ca3af;
+
+      --line: #e5e7eb;
+
+      --primary: #2563eb;
+      --primary-2: #1d4ed8;
+
+      --orange: #f97316;
+      --orange-2: #ea580c;
+
+      --shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
+
+      --r: 12px;
+      }
+
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        sans-serif;
+    }
+
+    body {
+    margin: 0;
+    padding: 0;
+    background: radial-gradient(
+        1200px 520px at 50% 110px,
+        rgba(255, 255, 255, 0.92),
+        rgba(255, 255, 255, 0)
+      ),
+      var(--bg);
+    color: var(--text);
+     }
+
+
+    .page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ---------- Header (match user dashboard) ---------- */
+    header {
+      background: linear-gradient(90deg, var(--navy), var(--navy-2));
+      color: #f9fafb;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 260px;
+    }
+
+    .brand svg {
+      width: 36px;
+      height: 36px;
+      flex: 0 0 auto;
+      opacity: 0.95;
+    }
+
+    .brand-title {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.1;
+    }
+
+    .brand-title strong {
+      font-size: 1.08rem;
+      letter-spacing: 0.2px;
+    }
+
+    .brand-title span {
+      margin-top: 4px;
+      font-size: 0.86rem;
+      color: rgba(255, 255, 255, 0.72);
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.9rem;
+      color: rgba(255, 255, 255, 0.78);
+    }
+
+    .user-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      background: rgba(255, 255, 255, 0.06);
+      color: rgba(255, 255, 255, 0.92);
+      white-space: nowrap;
+    }
+
+    .logout-btn {
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      background: transparent;
+      color: #fff;
+      padding: 7px 10px;
+      font-weight: 800;
+      cursor: pointer;
+      font-size: 0.82rem;
+    }
+
+    .logout-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+
+    main {
+      padding: 18px 24px 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1.1fr 1.2fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 900px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
+      padding: 14px 16px 14px;
+    }
+
+    .card h2 {
+      margin: 0 0 4px;
+      font-size: 1.05rem;
+    }
+
+    .card-subtitle {
+      margin: 0 0 10px;
+      color: #6b7280;
+      font-size: 0.83rem;
+    }
+
+    .stats-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .stat {
+      flex: 0 0 auto;
+      min-width: 110px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      font-size: 0.8rem;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+
+    .stat-value {
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin-top: 2px;
+    }
+
+    .btn {
+      border-radius: 999px;
+      border: none;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .btn-primary {
+      background: #2563eb;
+      color: #f9fafb;
+    }
+
+    .btn-primary:hover {
+      background: #1d4ed8;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: #e5e7eb;
+      border: 1px solid #4b5563;
+    }
+
+    .btn-ghost:hover {
+      background: #111827;
+    }
+
+    .btn-subtle {
+      background: #e5e7eb;
+      color: #111827;
+    }
+
+    .btn-subtle:hover {
+      background: #d1d5db;
+    }
+
+    .btn-danger {
+      background: #dc2626;
+      color: #f9fafb;
+    }
+
+    .btn-danger:hover {
+      background: #b91c1c;
+    }
+
+    .btn-sm {
+      padding: 4px 8px;
+      font-size: 0.75rem;
+    }
+
+    .status {
+      margin-top: 6px;
+      font-size: 0.8rem;
+    }
+
+    .status.ok span {
+      color: #059669;
+      font-weight: 600;
+    }
+
+    .status.error span {
+      color: #dc2626;
+      font-weight: 600;
+    }
+
+    .status.info span {
+      color: #2563eb;
+      font-weight: 600;
+    }
+
+    .muted {
+      color: #9ca3af;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+
+    th,
+    td {
+      padding: 6px 6px;
+      border-bottom: 1px solid #e5e7eb;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      font-weight: 600;
+      color: #4b5563;
+      white-space: nowrap;
+    }
+
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+      font-size: 0.8rem;
+      color: #6b7280;
+    }
+
+    .toolbar-left,
+    .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    select,
+    input[type="text"],
+    input[type="email"] {
+      border-radius: 999px;
+      border: 1px solid #d1d5db;
+      padding: 6px 10px;
+      font-size: 0.8rem;
+      background: #f9fafb;
+    }
+
+    .pill-status {
+      display: inline-block;
+      padding: 0.15rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .status-sent { background: #e0f2fe; color: #075985; }
+    .status-failed { background: #fee2e2; color: #b91c1c; }
+    .status-needs_resend { background: #fef3c7; color: #92400e; }
+    .status-resent { background: #ede9fe; color: #5b21b6; }
+    .status-delivered { background: #dcfce7; color: #166534; }
+    .status-cancelled { background: #f3f4f6; color: #4b5563; }
+
+        .status-received,
+    .status-producing,
+    .status-handed_over,
+    .status-in_transit,
+    .status-local_delivery,
+    .status-test {
+      background: #e0f2fe;
+      color: #075985;
+    }
+
+    .status-returned {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+
+    .tag-role {
+      padding: 1px 7px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      display: inline-block;
+    }
+
+    .tag-admin {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .tag-manager {
+      background: #e0f2fe;
+      color: #0369a1;
+    }
+
+    .tag-user {
+      background: #e5e7eb;
+      color: #374151;
+    }
+
+    footer {
+      padding: 10px 24px 18px;
+      text-align: center;
+      font-size: 0.75rem;
+      color: #9ca3af;
+    }
+
+    .badge-flag {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      margin-right: 4px;
+    }
+
+    .flag-true {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .flag-false {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+  <div class="brand">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#d7b46a"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 3v18" />
+      <path d="M5 6h14" />
+      <path d="M7 6l-3 6h6l-3-6Z" />
+      <path d="M17 6l-3 6h6l-3-6Z" />
+      <path d="M8 21h8" />
+    </svg>
+
+    <div class="brand-title">
+      <strong>The Law Guys</strong>
+      <span>Admin & Manager Dashboard</span>
+    </div>
+  </div>
+
+  <div class="header-right">
+    <div class="user-chip">
+      <span>Logged in as:</span>
+      <strong id="header-email">—</strong>
+      <span style="opacity:0.75;">·</span>
+      <span id="header-role">Role: —</span>
+    </div>
+
+    <button id="logout-btn" class="logout-btn">Log out</button>
+  </div>
+</header>
+
+
+    <main>
+      <!-- Row: Overview + Quick Jobs -->
+      <section class="grid-2">
+        <!-- Overview card -->
+        <div class="card">
+          <h2>Overview</h2>
+          <p class="card-subtitle">
+            High-level counts for all letters you can see.
+          </p>
+
+          <div class="stats-row">
+            <div class="stat">
+              <div class="stat-label">Total Jobs</div>
+              <div class="stat-value" id="stat-total">0</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Sent / In Flight</div>
+              <div class="stat-value" id="stat-sent">0</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Needs Resend</div>
+              <div class="stat-value" id="stat-needs">0</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Delivered</div>
+              <div class="stat-value" id="stat-delivered">0</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Failed / Returned</div>
+              <div class="stat-value" id="stat-failed">0</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Cancelled</div>
+              <div class="stat-value" id="stat-cancelled">0</div>
+            </div>
+          </div>
+
+          <div class="status" id="overviewStatus"></div>
+        </div>
+
+        <!-- Jobs quick view -->
+        <div class="card">
+          <div class="toolbar">
+            <div class="toolbar-left">
+              <span>Recent jobs</span>
+            </div>
+            <div class="toolbar-right">
+              <button id="refreshJobsBtn" class="btn btn-subtle btn-sm">
+                Refresh
+              </button>
+              <button id="run12DayBtn" class="btn btn-primary btn-sm">
+                Run 13-day check
+              </button>
+            </div>
+          </div>
+
+          <div class="status" id="jobsStatus"></div>
+
+          <div style="max-height: 260px; overflow:auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Recipient</th>
+                  <th>Status</th>
+                  <th>Mailing type</th>
+                  <th>Sent at</th>
+                </tr>
+              </thead>
+              <tbody id="jobsBody">
+                <tr>
+                  <td colspan="5" class="muted">
+                    No jobs yet. Upload letters from the main dashboard.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Admin-only: User Management -->
+      <section class="card" id="userManagementCard" style="display:none;">
+        <h2>User Management (Admin Only)</h2>
+        <p class="card-subtitle">
+          Invite users, toggle access, and control password policies.
+        </p>
+
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <strong>Create new user</strong>
+          </div>
+        </div>
+
+        <form id="createUserForm" style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:8px;">
+          <input
+            type="email"
+            id="newUserEmail"
+            placeholder="user@example.com"
+            required
+          />
+          <select id="newUserRole">
+            <option value="user">User</option>
+            <option value="manager">Manager</option>
+            <option value="admin">Admin</option>
+          </select>
+          <select id="newUserCanChangePassword">
+            <option value="true">Can change password</option>
+            <option value="false">Cannot change password</option>
+          </select>
+          <button type="submit" class="btn btn-primary btn-sm">
+            Invite user
+          </button>
+        </form>
+
+        <div class="status" id="createUserStatus"></div>
+
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:10px 0;" />
+
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <span>Existing users</span>
+          </div>
+          <div class="toolbar-right">
+            <button id="refreshUsersBtn" class="btn btn-subtle btn-sm">
+              Refresh users
+            </button>
+          </div>
+        </div>
+
+        <div class="status" id="usersStatus"></div>
+        <div class="status" id="resetStatus"></div> 
+
+        <div style="max-height: 260px; overflow:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Flags</th>
+                <th>Actions (role / reset)</th>
+              </tr>
+            </thead>
+            <tbody id="usersBody">
+              <tr>
+                <td colspan="5" class="muted">
+                  No users loaded yet.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      Admins and managers see all jobs. Normal users only see their own activity.
+    </footer>
+  </div>
+
+  <script>
+    const API_BASE = "";
+
+
+    // -------------------- Auth helpers --------------------
+    
+    function copyTextFromElement(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+
+      const text = el.innerText || el.textContent || "";
+
+      if (!text) return;
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(
+          () => {
+            // Optional: small confirmation; can be removed if you hate popups
+            alert("Temporary password copied to clipboard.");
+          },
+          () => {
+            // Fallback: select the text so the user can Ctrl+C manually
+            const range = document.createRange();
+            range.selectNodeContents(el);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+        );
+      } else {
+        // Older browsers: just select the text
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    }
+
+
+    function getSession() {
+      const token = localStorage.getItem("accessToken");
+      const type = localStorage.getItem("tokenType") || "Bearer";
+      const expiry = localStorage.getItem("accessTokenExpiry");
+      return { token, type, expiry: expiry ? Number(expiry) : null };
+    }
+
+    function requireAuth() {
+      const { token, expiry } = getSession();
+      if (!token || !expiry || Date.now() >= expiry) {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("tokenType");
+        localStorage.removeItem("accessTokenExpiry");
+        window.location.href = "/";
+
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("tokenType");
+      localStorage.removeItem("accessTokenExpiry");
+      window.location.href = "/";
+
+    }
+
+    document.getElementById("logout-btn").addEventListener("click", logout);
+
+    // Run immediately
+    requireAuth();
+
+    let currentUser = null; // will hold /auth/me result
+    let lastJobs = [];
+    let jobsSummary = null;
+
+    // -------------------- Load current user --------------------
+    async function loadCurrentUser() {
+      const { token, type } = getSession();
+      if (!token) {
+        logout();
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/auth/me`, {
+          headers: {
+            "Authorization": `${type} ${token}`,
+          },
+        });
+
+        if (res.status === 401) {
+          logout();
+          return;
+        }
+
+        if (!res.ok) {
+          throw new Error("Failed to load current user");
+        }
+
+        const data = await res.json();
+        currentUser = data;
+
+        document.getElementById("header-email").textContent = data.email;
+        document.getElementById("header-role").textContent = `Role: ${data.role}`;
+
+        // Show user management card only for admins
+        if (data.role === "admin") {
+          document.getElementById("userManagementCard").style.display = "block";
+          loadUsers();
+        } else {
+          document.getElementById("userManagementCard").style.display = "none";
+        }
+
+        // After we know role, load jobs overview
+        loadJobs();
+        loadSummary();
+      } catch (err) {
+        console.error(err);
+        logout();
+      }
+    }
+
+    // -------------------- Jobs --------------------
+    const jobsBody = document.getElementById("jobsBody");
+    const jobsStatus = document.getElementById("jobsStatus");
+    const overviewStatus = document.getElementById("overviewStatus");
+
+        function prettyStatusLabel(status) {
+      if (!status) return "Unknown";
+
+      // normalize
+      const s = status.toLowerCase();
+
+      if (s === "needs_resend") return "Needs resend";
+      if (s === "in_transit") return "In transit";
+      if (s === "local_delivery") return "Local delivery";
+      if (s === "handed_over") return "Handed over";
+      if (s === "sent") return "Sent";
+      if (s === "failed") return "Failed";
+      if (s === "resent") return "Resent";
+      if (s === "cancelled") return "Cancelled";
+      if (s === "returned") return "Returned";
+      if (s === "producing") return "Producing";
+      if (s === "received") return "Received";
+      if (s === "test") return "Test";
+
+      // Default: Title Case each segment
+      return s
+        .split(/[_\s]+/)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(" ");
+    }
+
+    function effectiveStatus(job) {
+      return (job.display_status || job.stannp_status_display || job.stannp_status || job.status || "").toLowerCase();
+    }
+
+    function renderJobs() {
+      jobsBody.innerHTML = "";
+
+      if (!Array.isArray(lastJobs) || lastJobs.length === 0) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 5;
+        td.className = "muted";
+        td.textContent = "No jobs found.";
+        tr.appendChild(td);
+        jobsBody.appendChild(tr);
+        return;
+      }
+
+      // Compute stats
+      // Compute stats (use same effective status we display)
+      
+
+      // Render a lightweight jobs table (recent rows)
+      lastJobs.forEach((job) => {
+        const tr = document.createElement("tr");
+
+        const tdId = document.createElement("td");
+        tdId.textContent = job.id;
+        tr.appendChild(tdId);
+
+        const tdRec = document.createElement("td");
+        tdRec.textContent = job.recipient_name || "";
+        tr.appendChild(tdRec);
+
+        const tdStatus = document.createElement("td");
+        const displayStatus = (job.display_status || job.stannp_status_display || job.stannp_status || job.status || "").toLowerCase();
+        const s = displayStatus;
+
+
+        const pill = document.createElement("span");
+        pill.classList.add("pill-status");
+
+        // Build CSS class like status-sent, status-needs_resend, status-local_delivery, etc.
+        const statusClass = "status-" + s.replace(/\s+/g, "_");
+        pill.classList.add(statusClass);
+
+        // Optional: treat printing/mailed as "sent" color
+        if (s === "printing" || s === "mailed") {
+          pill.classList.add("status-sent");
+        }
+
+        pill.textContent = prettyStatusLabel(s);
+
+        tdStatus.appendChild(pill);
+        tr.appendChild(tdStatus);
+
+
+        const tdMailType = document.createElement("td");
+        tdMailType.textContent = job.mailing_type || "";
+        tr.appendChild(tdMailType);
+
+        const tdSent = document.createElement("td");
+        tdSent.className = "muted";
+        tdSent.textContent = job.sent_at
+          ? new Date(job.sent_at).toLocaleString()
+          : "";
+        tr.appendChild(tdSent);
+
+        jobsBody.appendChild(tr);
+      });
+    }
+
+    async function loadSummary() {
+      const { token, type } = getSession();
+      if (!token) {
+        logout();
+        return;
+      }
+
+      overviewStatus.className = "status info";
+      overviewStatus.innerHTML = `<span>Loading overview…</span>`;
+
+      try {
+        const res = await fetch(`${API_BASE}/jobs/summary?recent_days=30`, {
+          headers: {
+            "Authorization": `${type} ${token}`,
+          },
+        });
+
+        if (res.status === 401) {
+          logout();
+          return;
+        }
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.detail || "Failed to load summary");
+        }
+
+        jobsSummary = data;
+
+        document.getElementById("stat-total").textContent = data.total_jobs_all_time ?? 0;
+        document.getElementById("stat-sent").textContent = data.sent_all_time ?? 0;
+        document.getElementById("stat-needs").textContent = data.needs_resend_all_time ?? 0;
+        document.getElementById("stat-delivered").textContent = data.delivered_all_time ?? 0;
+        document.getElementById("stat-failed").textContent = data.failed_all_time ?? 0;
+        document.getElementById("stat-cancelled").textContent = data.cancelled_all_time ?? 0;
+
+        overviewStatus.className = "status ok";
+        overviewStatus.innerHTML = `<span>Overview updated.</span>`;
+      } catch (err) {
+        console.error(err);
+        overviewStatus.className = "status error";
+        overviewStatus.innerHTML = `<span>Error loading overview:</span> ${err}`;
+      }
+    }
+
+    async function loadJobs() {
+      jobsStatus.className = "status info";
+      jobsStatus.innerHTML = `<span>Loading jobs…</span>`;
+
+      const { token, type } = getSession();
+      if (!token) {
+        logout();
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/jobs?sync=true&limit=30&offset=0`, {
+          headers: {
+            "Authorization": `${type} ${token}`,
+          },
+        });
+
+
+        if (res.status === 401) {
+          logout();
+          return;
+        }
+
+        const data = await res.json();
+        lastJobs = Array.isArray(data.items) ? data.items : [];
+
+        jobsStatus.className = "status";
+        jobsStatus.innerHTML = "";
+        renderJobs();
+      } catch (err) {
+        console.error(err);
+        jobsStatus.className = "status error";
+        jobsStatus.innerHTML = `<span>Error loading jobs:</span> ${err}`;
+      }
+    }
+
+    document
+      .getElementById("refreshJobsBtn")
+      .addEventListener("click", () => {
+        loadJobs();
+        loadSummary();
+      });
+
+    // Run 12-day check (admin only; managers will get 403 from backend)
+    document
+      .getElementById("run12DayBtn")
+      .addEventListener("click", async () => {
+        const { token, type } = getSession();
+        if (!token) {
+          logout();
+          return;
+        }
+
+        jobsStatus.className = "status info";
+        jobsStatus.innerHTML = `<span>Running 13-day check…</span>`;
+
+        try {
+          const res = await fetch(
+            `${API_BASE}/run_12_day_check_with_prompts?auto_resend=false`,
+            {
+              method: "POST",
+              headers: {
+                "Authorization": `${type} ${token}`,
+              },
+            }
+          );
+
+          const data = await res.json();
+
+          if (!res.ok) {
+            jobsStatus.className = "status error";
+            jobsStatus.innerHTML = `<span>Error:</span> ${
+              data.detail || JSON.stringify(data)
+            }`;
+          } else {
+            jobsStatus.className = "status ok";
+            jobsStatus.innerHTML = `<span>${
+              data.user_message || "13-day check completed."
+            }</span>`;
+            // Refresh jobs to see any updates
+            loadJobs();
+            loadSummary();
+          }
+        } catch (err) {
+          jobsStatus.className = "status error";
+          jobsStatus.innerHTML = `<span>Error:</span> ${err}`;
+        }
+      });
+
+    // -------------------- User Management (Admin only) --------------------
+    const usersBody = document.getElementById("usersBody");
+    const usersStatus = document.getElementById("usersStatus");
+    const createUserStatus = document.getElementById("createUserStatus");
+    const resetStatus = document.getElementById("resetStatus");
+
+    function renderUsers(users) {
+      usersBody.innerHTML = "";
+
+      if (!Array.isArray(users) || users.length === 0) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 5;
+        td.className = "muted";
+        td.textContent = "No users found.";
+        tr.appendChild(td);
+        usersBody.appendChild(tr);
+        return;
+      }
+
+      users.forEach((u) => {
+        const tr = document.createElement("tr");
+
+        const tdId = document.createElement("td");
+        tdId.textContent = u.id;
+        tr.appendChild(tdId);
+
+        const tdEmail = document.createElement("td");
+        tdEmail.textContent = u.email;
+        tr.appendChild(tdEmail);
+
+        const tdRole = document.createElement("td");
+        const spanRole = document.createElement("span");
+        spanRole.classList.add("tag-role");
+        if (u.role === "admin") spanRole.classList.add("tag-admin");
+        else if (u.role === "manager") spanRole.classList.add("tag-manager");
+        else spanRole.classList.add("tag-user");
+        spanRole.textContent = u.role;
+        tdRole.appendChild(spanRole);
+        tr.appendChild(tdRole);
+
+        const tdFlags = document.createElement("td");
+        const f1 = document.createElement("span");
+        f1.className = "badge-flag " + (u.is_active ? "flag-true" : "flag-false");
+        f1.textContent = "active: " + (u.is_active ? "yes" : "no");
+        tdFlags.appendChild(f1);
+
+        const f2 = document.createElement("span");
+        f2.className =
+          "badge-flag " + (u.must_change_password ? "flag-true" : "flag-false");
+        f2.textContent = "must change: " + (u.must_change_password ? "yes" : "no");
+        tdFlags.appendChild(f2);
+
+        const f3 = document.createElement("span");
+        f3.className =
+          "badge-flag " + (u.can_change_password ? "flag-true" : "flag-false");
+        f3.textContent =
+          "can change: " + (u.can_change_password ? "yes" : "no");
+        tdFlags.appendChild(f3);
+
+        tr.appendChild(tdFlags);
+
+        const tdActions = document.createElement("td");
+
+        // Button: Edit role / flags
+        const editBtn = document.createElement("button");
+        editBtn.className = "btn btn-subtle btn-sm";
+        editBtn.textContent = "Edit role & flags";
+        editBtn.style.marginRight = "4px";
+        editBtn.addEventListener("click", () => editUserFlags(u));
+        tdActions.appendChild(editBtn);
+
+        // Button: Reset password
+        const resetBtn = document.createElement("button");
+        resetBtn.className = "btn btn-danger btn-sm";
+        resetBtn.textContent = "Reset password";
+        resetBtn.addEventListener("click", () => resetUserPassword(u));
+        tdActions.appendChild(resetBtn);
+
+        tr.appendChild(tdActions);
+
+        // Button: Delete user
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "btn btn-danger btn-sm";
+        deleteBtn.textContent = "Delete";
+        deleteBtn.style.marginLeft = "4px";
+        deleteBtn.addEventListener("click", () => deleteUser(u));
+        tdActions.appendChild(deleteBtn);
+
+        tr.appendChild(tdActions);
+
+
+        usersBody.appendChild(tr);
+      });
+    }
+
+    async function loadUsers() {
+      const { token, type } = getSession();
+      if (!token) {
+        logout();
+        return;
+      }
+
+      usersStatus.className = "status info";
+      usersStatus.innerHTML = `<span>Loading users…</span>`;
+
+      try {
+        const res = await fetch(`${API_BASE}/admin/users`, {
+          headers: {
+            "Authorization": `${type} ${token}`,
+          },
+        });
+
+        if (res.status === 403) {
+          usersStatus.className = "status error";
+          usersStatus.innerHTML =
+            "<span>Forbidden:</span> You must be an admin to view this.";
+          return;
+        }
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.detail || "Failed to load users.");
+        }
+
+        usersStatus.className = "status";
+        usersStatus.innerHTML = "";
+
+        renderUsers(data);
+      } catch (err) {
+        console.error(err);
+        usersStatus.className = "status error";
+        usersStatus.innerHTML = `<span>Error:</span> ${err}`;
+      }
+    }
+
+    document
+      .getElementById("refreshUsersBtn")
+      .addEventListener("click", loadUsers);
+
+    // Create user (admin invite)
+    document
+      .getElementById("createUserForm")
+      .addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const emailEl = document.getElementById("newUserEmail");
+        const roleEl = document.getElementById("newUserRole");
+        const canChangeEl = document.getElementById("newUserCanChangePassword");
+
+        const email = emailEl.value.trim();
+        const role = roleEl.value;
+        const canChangePassword = canChangeEl.value === "true";
+
+        if (!email) return;
+
+        const { token, type } = getSession();
+        if (!token) {
+          logout();
+          return;
+        }
+
+        createUserStatus.className = "status info";
+        createUserStatus.innerHTML = `<span>Creating user…</span>`;
+
+        try {
+          const res = await fetch(`${API_BASE}/admin/users`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `${type} ${token}`,
+            },
+            body: JSON.stringify({
+              email,
+              role,
+              can_change_password: canChangePassword,
+            }),
+          });
+
+          const data = await res.json();
+
+          if (!res.ok) {
+            createUserStatus.className = "status error";
+            createUserStatus.innerHTML = `<span>Error:</span> ${
+              data.detail || JSON.stringify(data)
+            }`;
+            return;
+          }
+
+          createUserStatus.className = "status ok";
+          createUserStatus.innerHTML = `<span>User created.</span> Temporary password: <code>${data.temp_password}</code>`;
+
+          // Clear form
+          emailEl.value = "";
+          roleEl.value = "user";
+          canChangeEl.value = "true";
+
+          // Refresh list
+          loadUsers();
+        } catch (err) {
+          console.error(err);
+          createUserStatus.className = "status error";
+          createUserStatus.innerHTML = `<span>Error:</span> ${err}`;
+        }
+      });
+
+    async function editUserFlags(user) {
+    const { token, type } = getSession();
+    if (!token) {
+      logout();
+      return;
+    }
+
+    // Prompt for role first
+    const roleStr = prompt(
+      `Role for ${user.email} (current: ${user.role}). Enter one of: admin, manager, user — or leave blank to keep as is:`,
+      user.role
+    );
+
+    const isActiveStr = prompt(
+      `is_active for ${user.email} (current: ${user.is_active}). Enter true or false, or leave blank to keep as is:`,
+      String(user.is_active)
+    );
+    const mustChangeStr = prompt(
+      `must_change_password for ${user.email} (current: ${user.must_change_password}). Enter true or false, or leave blank to keep as is:`,
+      String(user.must_change_password)
+    );
+    const canChangeStr = prompt(
+      `can_change_password for ${user.email} (current: ${user.can_change_password}). Enter true or false, or leave blank to keep as is:`,
+      String(user.can_change_password)
+    );
+
+    const payload = {};
+
+    // Role
+    if (roleStr !== null && roleStr.trim() !== "" && roleStr.trim() !== user.role) {
+      const normalized = roleStr.trim().toLowerCase();
+      if (["admin", "manager", "user"].includes(normalized)) {
+        payload.role = normalized;
+      } else {
+        alert("Invalid role. Must be admin, manager, or user.");
+      }
+    }
+
+    // is_active
+    if (isActiveStr !== null && isActiveStr.trim() !== "") {
+      payload.is_active = isActiveStr.trim().toLowerCase() === "true";
+    }
+
+    // must_change_password
+    if (mustChangeStr !== null && mustChangeStr.trim() !== "") {
+      payload.must_change_password =
+        mustChangeStr.trim().toLowerCase() === "true";
+    }
+
+    // can_change_password
+    if (canChangeStr !== null && canChangeStr.trim() !== "") {
+      payload.can_change_password =
+        canChangeStr.trim().toLowerCase() === "true";
+    }
+
+    if (Object.keys(payload).length === 0) {
+      return; // nothing changed
+    }
+
+    usersStatus.className = "status info";
+    usersStatus.innerHTML = `<span>Updating user…</span>`;
+
+    try {
+      const res = await fetch(`${API_BASE}/admin/users/${user.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `${type} ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        usersStatus.className = "status error";
+        usersStatus.innerHTML = `<span>Error:</span> ${
+          data.detail || JSON.stringify(data)
+        }`;
+        return;
+      }
+
+      usersStatus.className = "status ok";
+      usersStatus.innerHTML = `<span>User updated.</span>`;
+      loadUsers();
+    } catch (err) {
+      console.error(err);
+      usersStatus.className = "status error";
+      usersStatus.innerHTML = `<span>Error:</span> ${err}`;
+    }
+  }
+
+  async function deleteUser(user) {
+  if (!confirm(`Delete user ${user.email}? This cannot be undone.`)) {
+    return;
+  }
+
+  const { token, type } = getSession();
+  if (!token) {
+    logout();
+    return;
+  }
+
+  usersStatus.className = "status info";
+  usersStatus.innerHTML = `<span>Deleting user…</span>`;
+
+  try {
+    const res = await fetch(`${API_BASE}/admin/users/${user.id}`, {
+      method: "DELETE",
+      headers: {
+        "Authorization": `${type} ${token}`,
+      },
+    });
+
+    if (!res.ok) {
+      let data = {};
+      try {
+        data = await res.json();
+      } catch (_) {}
+      usersStatus.className = "status error";
+      usersStatus.innerHTML = `<span>Error:</span> ${
+        data.detail || res.statusText
+      }`;
+      return;
+    }
+
+    usersStatus.className = "status ok";
+    usersStatus.innerHTML = `<span>User deleted.</span>`;
+    loadUsers();
+  } catch (err) {
+    console.error(err);
+    usersStatus.className = "status error";
+    usersStatus.innerHTML = `<span>Error:</span> ${err}`;
+  }
+}
+
+
+async function resetUserPassword(user) {
+  if (!confirm(`Reset password for ${user.email}?`)) {
+    return;
+  }
+
+  const { token, type } = getSession();
+  if (!token) {
+    logout();
+    return;
+  }
+
+  resetStatus.className = "status info";
+  resetStatus.innerHTML = `<span>Resetting password for ${user.email}…</span>`;
+
+  try {
+    const res = await fetch(`${API_BASE}/admin/users/${user.id}/reset_password`, {
+      method: "POST",
+      headers: {
+        "Authorization": `${type} ${token}`,
+      },
+    });
+
+    const data = await res.json();
+    // Helpful if we still have issues:
+    console.log("reset response:", data);
+
+    if (!res.ok) {
+      resetStatus.className = "status error";
+      resetStatus.innerHTML = `<span>Error:</span> ${
+        data.detail || JSON.stringify(data)
+      }`;
+      return;
+    }
+
+    // Be robust: handle either temp_password or temporary_password
+    const temp =
+      data.temp_password ||
+      data.temporary_password ||
+      (data.data &&
+        (data.data.temp_password || data.data.temporary_password));
+
+    if (!temp) {
+      // Backend didn’t send one; at least say so clearly
+      resetStatus.className = "status error";
+      resetStatus.innerHTML =
+        `<span>Reset succeeded but no temp password was returned from API. ` +
+        `Check server logs. Raw response logged in console.</span>`;
+      return;
+    }
+
+    // 🔥 SHOW IT IN A POPUP
+    alert(
+      `Temporary password for ${user.email}:\n\n` +
+      `${temp}\n\n` +
+      `Copy it now – you won’t see this popup again.`
+    );
+
+    // Also show in the UI under "Existing users"
+    resetStatus.className = "status ok";
+    resetStatus.innerHTML =
+      `<span>Password reset for ${user.email}.</span> ` +
+      `Temporary password: <code>${temp}</code>`;
+
+    // Refresh flags, but this will NOT clear resetStatus
+    loadUsers();
+  } catch (err) {
+    console.error(err);
+    resetStatus.className = "status error";
+    resetStatus.innerHTML = `<span>Error:</span> ${err}`;
+  }
+}
+
+
+    // Kick everything off
+    loadCurrentUser();
+  </script>
+</body>
+</html>
