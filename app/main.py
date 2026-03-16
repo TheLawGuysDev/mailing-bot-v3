@@ -7,7 +7,7 @@ import os
 from app.utils.logging import configure_logging
 from app.db import Base, engine
 import app.models  # noqa: F401
-from app.routers import health, auth, admin
+from app.routers import health, auth, admin, jobs, mailing, monday
 
 configure_logging()
 
@@ -38,12 +38,7 @@ def serve_html(filename: str) -> FileResponse:
 
 @app.get("/", include_in_schema=False)
 def home():
-    return {
-        "status": "ok",
-        "message": "Mailing Bot V3 is running",
-        "health": "/health",
-        "docs": "/docs",
-    }
+    return serve_html("login.html")
 
 
 @app.get("/dashboard", include_in_schema=False)
@@ -69,3 +64,6 @@ def change_password_page():
 app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(admin.router)
+app.include_router(jobs.router)
+app.include_router(mailing.router)
+app.include_router(monday.router)
