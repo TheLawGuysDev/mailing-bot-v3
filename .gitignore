@@ -1,0 +1,12 @@
+venv/
+__pycache__/
+*.pyc
+.env
+.env.local
+letters_local.db
+stored_pdfs/
+.vscode/
+.idea/
+dist/
+build/
+*.log
