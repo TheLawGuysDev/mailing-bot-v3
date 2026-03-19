@@ -1,10 +1,9 @@
-import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import HTTPException
 from sqlalchemy import func, or_
-from sqlalchemy.orm import joinedload, Session
+from sqlalchemy.orm import Session
 
 from app.config import PDF_RETENTION_DAYS_NORMAL, PDF_RETENTION_DAYS_RESEND
 from app.models.letter_job import LetterJob
@@ -21,6 +20,7 @@ from app.services.stannp_service import (
     TOO_LATE_STANNP,
     CANCELLABLE_STANNP,
 )
+from app.services.storage import download_pdf_bytes, delete_blob_if_exists
 
 
 def ensure_utc(dt: datetime | None) -> datetime | None:
@@ -185,14 +185,15 @@ def auto_resend_job(job: LetterJob) -> dict:
             detail="No stored PDF is available for this job (pdf_path is empty).",
         )
 
-    if not os.path.exists(job.pdf_path):
+    try:
+        pdf_bytes = download_pdf_bytes(job.pdf_path)
+    except HTTPException:
+        raise
+    except Exception as e:
         raise HTTPException(
             status_code=410,
-            detail="Stored PDF file no longer exists on disk for this job.",
+            detail=f"Stored PDF file could not be read from GCS for this job: {e}",
         )
-
-    with open(job.pdf_path, "rb") as f:
-        pdf_bytes = f.read()
 
     body_pages = count_pdf_pages(pdf_bytes)
     duplex = body_pages >= 6
@@ -228,6 +229,87 @@ def auto_resend_job(job: LetterJob) -> dict:
         job.error_message = note
 
     return {"stannp_id": new_stannp_id}
+
+
+def cleanup_old_pdf_blobs(db: Session) -> dict:
+    now = datetime.now(timezone.utc)
+
+    jobs = (
+        db.query(LetterJob)
+        .filter(LetterJob.pdf_path.isnot(None))
+        .all()
+    )
+
+    removed_files = 0
+    updated_jobs = 0
+
+    for job in jobs:
+        sent_at = ensure_utc(job.sent_at)
+        if not sent_at:
+            continue
+
+        age_days = (now - sent_at).days
+
+        if job.status == "needs_resend":
+            if age_days < PDF_RETENTION_DAYS_RESEND:
+                continue
+        else:
+            if age_days < PDF_RETENTION_DAYS_NORMAL:
+                continue
+
+        if job.pdf_path:
+            deleted = delete_blob_if_exists(job.pdf_path)
+            if deleted:
+                removed_files += 1
+
+        job.pdf_path = None
+        db.add(job)
+        updated_jobs += 1
+
+    db.commit()
+
+    return {
+        "status": "ok",
+        "checked_jobs": len(jobs),
+        "removed_files": removed_files,
+        "updated_jobs": updated_jobs,
+        "retention_normal_days": PDF_RETENTION_DAYS_NORMAL,
+        "retention_resend_days": PDF_RETENTION_DAYS_RESEND,
+    }
+
+
+def cleanup_delivered_job_blobs(db: Session) -> dict:
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(days=14)
+
+    jobs = (
+        db.query(LetterJob)
+        .filter(LetterJob.status == "delivered")
+        .filter(LetterJob.delivered_scan_at.isnot(None))
+        .filter(LetterJob.delivered_scan_at <= cutoff)
+        .all()
+    )
+
+    deleted_rows = 0
+    removed_files = 0
+
+    for job in jobs:
+        if job.pdf_path:
+            deleted = delete_blob_if_exists(job.pdf_path)
+            if deleted:
+                removed_files += 1
+
+        db.delete(job)
+        deleted_rows += 1
+
+    db.commit()
+
+    return {
+        "status": "ok",
+        "deleted_rows": deleted_rows,
+        "removed_files": removed_files,
+        "cutoff": cutoff.isoformat(),
+    }
 
 
 def run_12_day_check_logic(db: Session, auto_resend: bool = False) -> dict:

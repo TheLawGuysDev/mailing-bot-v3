@@ -1,18 +1,12 @@
-import os
 from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from app.models.monday_job_link import MondayJobLink
-from app.services.drive_service import resolve_drive_file, fetch_drive_pdf_bytes
-from app.services.monday_service import update_monday_send_result, post_monday_comment
-
-
-from app.config import PDF_STORAGE_DIR
 from app.models.letter_job import LetterJob
 from app.models.user import User
+from app.models.monday_job_link import MondayJobLink
 from app.services.pdf_service import (
     detect_mailing_type,
     extract_addresses_from_pdf,
@@ -20,6 +14,17 @@ from app.services.pdf_service import (
     insert_blank_after_first_page,
 )
 from app.services.stannp_service import send_letter_via_stannp
+from app.services.storage import upload_pdf_bytes
+from app.services.drive_service import resolve_drive_file, fetch_drive_pdf_bytes
+from app.services.monday_service import update_monday_send_result, post_monday_comment
+
+
+def _build_pdf_blob_name(original_file_name: str) -> str:
+    now = datetime.now(timezone.utc)
+    timestamp = now.strftime("%Y%m%d_%H%M%S_%f")
+    dated_prefix = now.strftime("letters/%Y/%m/%d")
+    safe_name = f"{timestamp}_{original_file_name}"
+    return f"{dated_prefix}/{safe_name}"
 
 
 def create_letter_jobs_from_pdf_bytes(
@@ -53,11 +58,9 @@ def create_letter_jobs_from_pdf_bytes(
 
     pdf_path: Optional[str] = None
     if save_pdf:
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
-        safe_name = f"{timestamp}_{original_file_name}"
-        pdf_path = os.path.join(PDF_STORAGE_DIR, safe_name)
-        with open(pdf_path, "wb") as f:
-            f.write(body_pdf_bytes)
+        blob_name = _build_pdf_blob_name(original_file_name)
+        upload_pdf_bytes(body_pdf_bytes, blob_name)
+        pdf_path = blob_name
 
     results = []
 
@@ -161,6 +164,7 @@ def create_letter_jobs_from_pdf_bytes(
         "body_pages": body_pages,
         "duplex": duplex,
     }
+
 
 def link_monday_jobs(
     db: Session,

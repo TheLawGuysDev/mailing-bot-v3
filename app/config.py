@@ -6,7 +6,7 @@ load_dotenv(".env", override=False)
 if os.path.exists(".env.local"):
     load_dotenv(".env.local", override=True)
 
-APP_ENV = os.getenv("APP_ENV", "").lower()
+APP_ENV = os.getenv("APP_ENV", "").lower() or "local"
 
 DATABASE_URL = os.getenv("DATABASE_URL", "")
 
@@ -27,7 +27,6 @@ FROM_STATE = os.getenv("FROM_STATE", "CA")
 FROM_POSTCODE = os.getenv("FROM_POSTCODE", "92117")
 FROM_COUNTRY = os.getenv("FROM_COUNTRY", "US")
 
-PDF_STORAGE_DIR = os.getenv("PDF_STORAGE_DIR", "stored_pdfs")
 PDF_RETENTION_DAYS_NORMAL = int(os.getenv("PDF_RETENTION_DAYS_NORMAL", "14"))
 PDF_RETENTION_DAYS_RESEND = int(os.getenv("PDF_RETENTION_DAYS_RESEND", "28"))
 
@@ -41,8 +40,14 @@ MONDAY_API_URL = os.getenv("MONDAY_API_URL", "https://api.monday.com/v2")
 
 GOOGLE_SERVICE_ACCOUNT_FILE = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE", "")
 GOOGLE_DRIVE_SHARED_DRIVE_ID = os.getenv("GOOGLE_DRIVE_SHARED_DRIVE_ID", "")
+GCS_BUCKET = os.getenv("GCS_BUCKET", "")
 
-os.makedirs(PDF_STORAGE_DIR, exist_ok=True)
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL is not set.")
 
 if not STANNP_API_KEY:
-    raise RuntimeError("STANNP_API_KEY is not set in .env or environment variables.")
+    raise RuntimeError("STANNP_API_KEY is not set.")
+
+# Only require bucket outside local/dev
+if APP_ENV in ("production", "prod") and not GCS_BUCKET:
+    raise RuntimeError("GCS_BUCKET is required in production.")
