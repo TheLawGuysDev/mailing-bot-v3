@@ -10,3 +10,8 @@ stored_pdfs/
 dist/
 build/
 *.log
+.env
+.env
+.env
+.env.local
+1FU.pdf
