@@ -60,10 +60,6 @@ def admin_page():
 def change_password_page():
     return serve_html("change_password.html")
 
-@app.get("/monday-view", include_in_schema=False)
-def monday_view_page():
-    return serve_html("monday_view.html")
-
 app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(admin.router)
