@@ -16,3 +16,15 @@ build/
 .env.local
 1FU.pdf
 .env.local
+app/utils/__pycache__/logging.cpython-314.pyc
+app/utils/__pycache__/__init__.cpython-314.pyc
+app/routers/__pycache__/health.cpython-314.pyc
+app/routers/__pycache__/__init__.cpython-314.pyc
+app/models/__pycache__/user.cpython-314.pyc
+app/models/__pycache__/monday_job_link.cpython-314.pyc
+app/models/__pycache__/letter_job.cpython-314.pyc
+app/models/__pycache__/__init__.cpython-314.pyc
+app/__pycache__/main.cpython-314.pyc
+app/__pycache__/db.cpython-314.pyc
+app/__pycache__/config.cpython-314.pyc
+app/__pycache__/__init__.cpython-314.pyc
