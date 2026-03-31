@@ -1,7 +1,8 @@
+import requests
 from fastapi import HTTPException
 
 from app.clients.monday_client import update_monday_item, create_monday_update
-
+from app.config import MONDAY_API_TOKEN, MONDAY_API_URL
 
 def verify_monday_request(authorization_header: str | None):
     """
@@ -26,6 +27,50 @@ def verify_monday_request(authorization_header: str | None):
         raise HTTPException(status_code=401, detail="Empty bearer token")
 
     return {"verified": True, "token_present": True}
+
+
+def get_monday_user_by_id(user_id: int | str | None) -> dict | None:
+    """Fetches a Monday user by id (e.g. event.userId from the webhook payload).
+
+    Returns None only for missing userId or sentinel -4 (no actor).
+    Raises if Monday returns GraphQL errors.
+    """
+    if user_id is None:
+        return None
+    try:
+        if int(user_id) == -4:
+            return None
+    except (TypeError, ValueError):
+        pass
+
+    query = """
+    query {
+        users (ids: [%s]) {
+            id
+            name
+            email
+        }
+    }
+    """ % user_id
+
+    response = requests.post(
+        MONDAY_API_URL,
+        json={"query": query},
+        headers={
+            "Authorization": MONDAY_API_TOKEN,
+            "Content-Type": "application/json",
+            "API-Version": "2024-01",
+        },
+    )
+    response.raise_for_status()
+    data = response.json()
+    errors = data.get("errors")
+    if errors:
+        raise RuntimeError(
+            "; ".join(e.get("message", "") for e in errors if isinstance(e, dict))
+        )
+    users = data.get("data", {}).get("users")
+    return users[0] if users else None
 
 
 def update_monday_send_result(

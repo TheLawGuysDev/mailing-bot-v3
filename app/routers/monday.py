@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, Header, Request
 from sqlalchemy.orm import Session
 
@@ -11,6 +13,9 @@ from app.clients.monday_client import get_file_from_column
 from app.clients.monday_client import get_column_id_by_title
 from app.services.monday_service import verify_monday_request
 from app.services.monday_service import post_monday_comment
+from app.services.monday_service import get_monday_user_by_id
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/integrations/monday", tags=["Monday"])
 
@@ -54,7 +59,23 @@ async def handle_status_webhook(request: Request, db: Session = Depends(get_db))
     item_id = event.get("pulseId")
     board_id = event.get("boardId")
     #print(f"DEBUG: Received webhook for Item ID: {item_id}")
-    
+
+    try:
+        monday_user = get_monday_user_by_id(event.get("userId"))
+        logger.info(
+            "Monday webhook get_monday_user_by_id item_id=%s userId=%r result=%s",
+            item_id,
+            event.get("userId"),
+            monday_user,
+        )
+    except Exception as exc:
+        logger.warning(
+            "Monday webhook get_monday_user_by_id failed item_id=%s userId=%r: %s",
+            item_id,
+            event.get("userId"),
+            exc,
+        )
+
     col_id = get_column_id_by_title(board_id, "Stannp Files")
     
     if not col_id:
