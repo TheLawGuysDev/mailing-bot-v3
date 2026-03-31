@@ -26,4 +26,4 @@ ENV PORT=8080
 
 # Start the FastAPI app with uvicorn
 # main:app -> file `main.py`, variable `app`
-CMD ["bash", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT}"]
+CMD ["bash", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]
