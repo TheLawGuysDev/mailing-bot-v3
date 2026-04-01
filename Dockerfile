@@ -1,29 +1,24 @@
-# Use a slim Python base image
-FROM python:3.11-slim
+FROM python:3.12-slim
 
-# Set working directory
 WORKDIR /app
 
-# Prevent Python from writing .pyc files and buffer logs
-ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
 
-# Install system dependencies (needed for some libs like uvicorn, jose, passlib)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-  && rm -rf /var/lib/apt/lists/*
-
-# Copy requirements and install dependencies
-COPY requirements.txt .
-
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy the rest of the app code
-COPY . .
-
-# Cloud Run will inject $PORT; default to 8080 for local docker run
+# Docker Compose overrides via .env (e.g. sqlite:////data/...).
+# Cloud Run / no env: app defaults to sqlite:////tmp/mailing_bot.db in config.py.
+ENV DATABASE_URL=sqlite:////data/mailing_bot.db
+ENV APP_ENV=local
 ENV PORT=8080
 
-# Start the FastAPI app with uvicorn
-# main:app -> file `main.py`, variable `app`
-CMD ["bash", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]
+RUN mkdir -p /data
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY app ./app
+COPY scripts ./scripts
+
+EXPOSE 8080
+
+CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}"]

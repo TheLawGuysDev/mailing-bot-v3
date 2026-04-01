@@ -8,7 +8,9 @@ if os.path.exists(".env.local"):
 
 APP_ENV = os.getenv("APP_ENV", "").lower() or "local"
 
-DATABASE_URL = os.getenv("DATABASE_URL", "")
+_raw_db = (os.getenv("DATABASE_URL") or "").strip()
+# Cloud Run / zero-config: ephemeral SQLite (no DATABASE_URL env needed).
+DATABASE_URL = _raw_db or "sqlite:////tmp/mailing_bot.db"
 
 STANNP_API_KEY = os.getenv("STANNP_API_KEY")
 STANNP_BASE_URL = os.getenv("STANNP_BASE_URL", "https://us.stannp.com/api/v1")
@@ -41,9 +43,6 @@ MONDAY_API_URL = os.getenv("MONDAY_API_URL", "https://api.monday.com/v2")
 GOOGLE_SERVICE_ACCOUNT_FILE = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE", "")
 GOOGLE_DRIVE_SHARED_DRIVE_ID = os.getenv("GOOGLE_DRIVE_SHARED_DRIVE_ID", "")
 GCS_BUCKET = os.getenv("GCS_BUCKET", "")
-
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL is not set.")
 
 if not STANNP_API_KEY:
     raise RuntimeError("STANNP_API_KEY is not set.")

@@ -1,0 +1,15 @@
+# Dev: SQLite en ./data/mailing_bot.db (persistente en el host).
+# Producción: usa la misma imagen y pasa DATABASE_URL de Postgres (Cloud SQL, etc.)
+services:
+  app:
+    build: .
+    ports:
+      - "${HOST_PORT:-8080}:8080"
+    env_file:
+      - path: .env
+      - path: .env.local
+        required: false
+    environment:
+      PORT: "8080"
+    volumes:
+      - ./data:/data

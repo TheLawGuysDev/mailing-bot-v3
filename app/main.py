@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -5,15 +7,30 @@ from fastapi.staticfiles import StaticFiles
 import os
 
 from app.utils.logging import configure_logging
-from app.db import Base, engine
+from app.db import Base, engine, SessionLocal
 import app.models  # noqa: F401
 from app.routers import health, auth, admin, jobs, mailing, monday
+from app.startup_bootstrap import ensure_initial_admin_if_empty
 
 configure_logging()
 
-Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Demand Letter Bot Backend V3", version="3.0.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
+    try:
+        ensure_initial_admin_if_empty(db)
+    finally:
+        db.close()
+    yield
+
+
+app = FastAPI(
+    title="Demand Letter Bot Backend V3",
+    version="3.0.0",
+    lifespan=lifespan,
+)
 
 app.add_middleware(
     CORSMiddleware,

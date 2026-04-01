@@ -5,10 +5,6 @@ from sqlalchemy.engine.url import make_url
 from app.config import DATABASE_URL
 
 
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL is not set. Refusing to use sqlite unless explicitly configured.")
-
-
 def build_engine(db_url: str):
     """
     Supports:
