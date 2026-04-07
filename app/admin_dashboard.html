@@ -923,7 +923,7 @@
         loadSummary();
       });
 
-    // Run 12-day check (admin only; managers will get 403 from backend)
+    // 13-day check (admin): batched sync only (auto_resend=false). Marks needs_resend; no automatic Stannp resend.
     document
       .getElementById("run12DayBtn")
       .addEventListener("click", async () => {
@@ -933,36 +933,71 @@
           return;
         }
 
+        const BATCH_SIZE = 75;
+        const MAX_BATCHES = 500; // safety cap; rerun the action if hit
+        let afterId = 0;
+        let batchNum = 0;
+        let totalChecked = 0;
+        let totalMarked = 0;
+        let totalSyncErrors = 0;
+
         jobsStatus.className = "status info";
-        jobsStatus.innerHTML = `<span>Running 13-day check…</span>`;
+        jobsStatus.innerHTML = `<span>Running 13-day check (sync only)…</span>`;
 
         try {
-          const res = await fetch(
-            `${API_BASE}/run_12_day_check_with_prompts?auto_resend=false`,
-            {
-              method: "POST",
-              headers: {
-                "Authorization": `${type} ${token}`,
-              },
+          while (batchNum < MAX_BATCHES) {
+            batchNum++;
+            const params = new URLSearchParams({
+              auto_resend: "false",
+              batch_size: String(BATCH_SIZE),
+              after_id: String(afterId),
+            });
+            const res = await fetch(
+              `${API_BASE}/run_12_day_check_with_prompts?${params}`,
+              {
+                method: "POST",
+                headers: {
+                  "Authorization": `${type} ${token}`,
+                },
+              }
+            );
+
+            const data = await res.json();
+
+            if (!res.ok) {
+              jobsStatus.className = "status error";
+              jobsStatus.innerHTML = `<span>Error (batch ${batchNum}):</span> ${
+                data.detail || data.user_message || JSON.stringify(data)
+              }`;
+              return;
             }
-          );
 
-          const data = await res.json();
+            totalChecked += data.checked ?? 0;
+            totalMarked += data.marked_needs_resend ?? 0;
+            totalSyncErrors += data.sync_errors ?? 0;
 
-          if (!res.ok) {
-            jobsStatus.className = "status error";
-            jobsStatus.innerHTML = `<span>Error:</span> ${
-              data.detail || JSON.stringify(data)
-            }`;
-          } else {
-            jobsStatus.className = "status ok";
-            jobsStatus.innerHTML = `<span>${
-              data.user_message || "13-day check completed."
-            }</span>`;
-            // Refresh jobs to see any updates
-            loadJobs();
-            loadSummary();
+            jobsStatus.innerHTML =
+              `<span>Batch ${batchNum}: +${data.checked ?? 0} checked (running total ${totalChecked})…</span>`;
+
+            if (!data.has_more || (data.checked ?? 0) === 0) {
+              // No further pages, or nothing matched this cursor.
+              jobsStatus.className = "status ok";
+              jobsStatus.innerHTML = `<span>Done: ${totalChecked} letter(s) checked in ${batchNum} batch(es).${
+                totalMarked ? ` Marked needs_resend: ${totalMarked}.` : ""
+              }${totalSyncErrors ? ` Stannp sync errors: ${totalSyncErrors}.` : ""}</span>`;
+              loadJobs();
+              loadSummary();
+              return;
+            }
+
+            afterId = data.next_after_id ?? afterId; // pass as after_id on the next request
           }
+
+          jobsStatus.className = "status error";
+          jobsStatus.innerHTML =
+            `<span>Stopped after ${MAX_BATCHES} batches (safety limit). Checked so far: ${totalChecked}. Run again to continue.</span>`;
+          loadJobs();
+          loadSummary();
         } catch (err) {
           jobsStatus.className = "status error";
           jobsStatus.innerHTML = `<span>Error:</span> ${err}`;

@@ -1086,32 +1086,81 @@
       jobAction(jobId, action);
     });
 
-    // 12-day check (admin-only; managers will probably see 403)
+    // 13-day check (manager): repeated POSTs with batch_size/after_id until has_more is false.
+    // Each batch syncs from Stannp first; auto_resend=true may create new Stannp letters when rules match.
     document.getElementById("run12DayBtn").addEventListener("click", async () => {
       const { token, type } = getSession();
       if (!token) { logout(); return; }
 
+      const BATCH_SIZE = 75;
+      const MAX_BATCHES = 500; // safety cap so a runaway loop cannot hammer the API forever
+      let afterId = 0;
+      let batchNum = 0;
+      let totalChecked = 0;
+      let totalMarked = 0;
+      let totalSuccess = 0;
+      let totalFailed = 0;
+      let totalSyncErrors = 0;
+
       jobsStatus.className = "status info";
-      jobsStatus.innerHTML = `<span>Running 13-day check…</span>`;
+      jobsStatus.innerHTML = `<span>Running 13-day check (sync + auto-resend)…</span>`;
 
       try {
-        const res = await fetch(`${API_BASE}/run_12_day_check_with_prompts?auto_resend=true`, {
-          method: "POST",
-          headers: { "Authorization": `${type} ${token}` },
-        });
+        while (batchNum < MAX_BATCHES) {
+          batchNum++;
+          const params = new URLSearchParams({
+            auto_resend: "true",
+            batch_size: String(BATCH_SIZE),
+            after_id: String(afterId),
+          });
+          const res = await fetch(`${API_BASE}/run_12_day_check_with_prompts?${params}`, {
+            method: "POST",
+            headers: { "Authorization": `${type} ${token}` },
+          });
 
-        const data = await res.json();
+          const data = await res.json();
 
-        if (!res.ok) {
-          jobsStatus.className = "status error";
-          jobsStatus.innerHTML = `<span>Error:</span> ${
-            data.detail || data.user_message || JSON.stringify(data)
-          }`;
-        } else {
-          jobsStatus.className = "status ok";
-          jobsStatus.innerHTML = `<span>${data.user_message || "13-day check completed."}</span>`;
-          loadJobs();
+          if (!res.ok) {
+            jobsStatus.className = "status error";
+            jobsStatus.innerHTML = `<span>Error (batch ${batchNum}):</span> ${
+              data.detail || data.user_message || JSON.stringify(data)
+            }`;
+            return;
+          }
+
+          totalChecked += data.checked ?? 0;
+          totalMarked += data.marked_needs_resend ?? 0;
+          totalSuccess += data.auto_resend_success ?? 0;
+          totalFailed += data.auto_resend_failed ?? 0;
+          totalSyncErrors += data.sync_errors ?? 0;
+
+          jobsStatus.innerHTML =
+            `<span>Batch ${batchNum}: +${data.checked ?? 0} checked (running total ${totalChecked})…</span>`;
+
+          // Full backlog processed for this run, or no rows in this slice.
+          if (!data.has_more || (data.checked ?? 0) === 0) {
+            const summaryParts = [
+              `Done: ${totalChecked} letter(s) checked in ${batchNum} batch(es).`,
+              totalSuccess ? ` Auto-resent: ${totalSuccess}.` : "",
+              totalFailed ? ` Failed auto-resend: ${totalFailed}.` : "",
+              totalMarked ? ` Marked needs_resend: ${totalMarked}.` : "",
+              totalSyncErrors ? ` Stannp sync errors: ${totalSyncErrors}.` : "",
+            ].join("");
+            jobsStatus.className = "status ok";
+            jobsStatus.innerHTML = `<span>${summaryParts}</span>`;
+            await loadJobs();
+            await loadSummary();
+            return;
+          }
+
+          afterId = data.next_after_id ?? afterId; // next slice starts strictly after this id
         }
+
+        jobsStatus.className = "status error";
+        jobsStatus.innerHTML =
+          `<span>Stopped after ${MAX_BATCHES} batches (safety limit). Checked so far: ${totalChecked}. Run again to continue.</span>`;
+        await loadJobs();
+        await loadSummary();
       } catch (err) {
         console.error(err);
         jobsStatus.className = "status error";

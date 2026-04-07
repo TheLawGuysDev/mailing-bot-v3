@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
@@ -120,32 +120,42 @@ async def send_letters(
 def run_12_day_check_with_prompts(
     db: Session = Depends(get_db),
     auto_resend: bool = False,
+    # Batched 13-day check: use after_id from response.next_after_id while has_more is true.
+    batch_size: int = Query(75, ge=1, le=200),
+    after_id: int = Query(0, ge=0),
     current_user=Depends(require_manager_or_admin),
 ):
-    base_result = run_12_day_check_logic(db=db, auto_resend=auto_resend)
+    base_result = run_12_day_check_logic(
+        db=db,
+        auto_resend=auto_resend,
+        batch_size=batch_size,
+        after_id=after_id,
+    )
 
     checked = base_result.get("checked", 0)
     marked = base_result.get("marked_needs_resend", 0)
     auto_success = base_result.get("auto_resend_success", 0)
     auto_failed = base_result.get("auto_resend_failed", 0)
+    sync_errors = base_result.get("sync_errors", 0)
+    has_more = base_result.get("has_more", False)
 
     if checked == 0:
-        user_message = "ℹ️ There were no previously sent letters to check for the 12-day rule."
+        user_message = "ℹ️ There were no previously sent letters to check in this batch (or nothing left after this cursor)."
     elif not auto_resend:
         if marked == 0:
-            user_message = f"✅ I checked {checked} previously sent letter(s). None are overdue based on the 12-day rule."
+            user_message = f"✅ This batch: checked {checked} letter(s). None newly marked as 'needs_resend'."
         else:
             user_message = (
-                f"⏰ I checked {checked} previously sent letter(s). "
+                f"⏰ This batch: checked {checked} letter(s). "
                 f"{marked} are 12+ days old and are now marked as 'needs_resend'. "
                 "You can review and manually resend them from the dashboard."
             )
     else:
         if auto_success == 0 and auto_failed == 0:
-            user_message = f"ℹ️ I checked {checked} letter(s), but none required auto-resend."
+            user_message = f"ℹ️ This batch: checked {checked} letter(s); none required auto-resend."
         else:
             user_message = (
-                f"⏰ I checked {checked} previously sent letter(s). "
+                f"⏰ This batch: checked {checked} letter(s). "
                 f"{auto_success} were automatically resent using the stored PDFs. "
             )
             if auto_failed > 0:
@@ -153,6 +163,15 @@ def run_12_day_check_with_prompts(
                     f"{auto_failed} could not be resent automatically and are "
                     "marked as 'needs_resend' for manual review."
                 )
+
+    # Surface per-batch Stannp failures so operators can retry without guessing.
+    if sync_errors:
+        user_message += (
+            f" ⚠️ {sync_errors} job(s) in this batch could not be reached on Stannp "
+            "(left unchanged; try again later)."
+        )
+    if has_more:
+        user_message += " More batches remain — run again (the dashboard continues automatically)."
 
     base_result["user_message"] = user_message
     return base_result

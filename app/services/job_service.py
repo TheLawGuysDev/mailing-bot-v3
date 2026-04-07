@@ -312,28 +312,50 @@ def cleanup_delivered_job_blobs(db: Session) -> dict:
     }
 
 
-def run_12_day_check_logic(db: Session, auto_resend: bool = False) -> dict:
+def run_12_day_check_logic(
+    db: Session,
+    auto_resend: bool = False,
+    *,
+    batch_size: int | None = None,
+    after_id: int = 0,
+) -> dict:
+    """
+    13+ day rule: Stannp sync and optional auto-resend for eligible LetterJobs.
+
+    Batching: pass batch_size so each HTTP request processes at most that many rows
+    (stable order by id, cursor after_id). Returns has_more / next_after_id so clients
+    can drain large backlogs without gateway timeouts. Pass batch_size=None only if you
+    intentionally want a single unbounded run.
+    """
     cutoff = datetime.now(timezone.utc) - timedelta(days=13)
 
+    # needs_resend is intentionally omitted so those rows are re-fetched from Stannp
+    # (avoids stale "needs resend" when the letter was actually delivered).
     terminal_statuses = [
         "delivered",
         "returned",
         "cancelled",
         "failed",
-        "needs_resend",
         "resent",
     ]
 
-    overdue_jobs = (
+    query = (
         db.query(LetterJob)
         .filter(LetterJob.sent_at <= cutoff)
         .filter(~LetterJob.status.in_(terminal_statuses))
-        .all()
+        .order_by(LetterJob.id)
     )
+    if after_id:
+        query = query.filter(LetterJob.id > after_id)
+    if batch_size is not None:
+        overdue_jobs = query.limit(batch_size).all()  # one page per API call
+    else:
+        overdue_jobs = query.all()
 
     marked_needs_resend = 0
     auto_resend_success = 0
     auto_resend_failed = 0
+    sync_errors = 0
 
     for job in overdue_jobs:
         try:
@@ -345,6 +367,8 @@ def run_12_day_check_logic(db: Session, auto_resend: bool = False) -> dict:
             apply_tracking_stamps_to_job(job, stamps)
 
         except Exception:
+            # Stannp/network failure: do not change resend flags; caller can retry.
+            sync_errors += 1
             job.last_status_check = datetime.now(timezone.utc)
             db.add(job)
             continue
@@ -352,11 +376,19 @@ def run_12_day_check_logic(db: Session, auto_resend: bool = False) -> dict:
         st = (job.stannp_status or "").lower()
         local_status = (job.status or "").lower()
 
+        # Terminal or delivered-by-tracking: skip resend; align local status if it was needs_resend.
         if (
             st in {"delivered", "returned", "cancelled", "error"}
             or local_status == "delivered"
             or getattr(job, "delivered_scan_at", None) is not None
         ):
+            if local_status == "needs_resend":
+                if st == "delivered" or getattr(job, "delivered_scan_at", None) is not None:
+                    job.status = "delivered"
+                elif st in {"returned", "error"}:
+                    job.status = "failed"
+                elif st == "cancelled":
+                    job.status = "cancelled"
             job.last_status_check = datetime.now(timezone.utc)
             db.add(job)
             continue
@@ -387,6 +419,10 @@ def run_12_day_check_logic(db: Session, auto_resend: bool = False) -> dict:
 
     db.commit()
 
+    # Cursor for the next request: if we got a full page, there may be more rows after next_after_id.
+    next_after_id = max((j.id for j in overdue_jobs), default=after_id)
+    has_more = batch_size is not None and len(overdue_jobs) == batch_size
+
     return {
         "status": "ok",
         "checked": len(overdue_jobs),
@@ -394,4 +430,9 @@ def run_12_day_check_logic(db: Session, auto_resend: bool = False) -> dict:
         "auto_resend": auto_resend,
         "auto_resend_success": auto_resend_success,
         "auto_resend_failed": auto_resend_failed,
+        "sync_errors": sync_errors,
+        "after_id": after_id,
+        "batch_size": batch_size,
+        "next_after_id": next_after_id,
+        "has_more": has_more,
     }
