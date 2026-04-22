@@ -12,6 +12,9 @@ from app.services.mailing_service import create_letter_jobs_from_pdf_bytes
 from app.clients.monday_client import get_file_from_column
 from app.clients.monday_client import get_column_id_by_title
 from app.clients.monday_client import clear_file_column
+from app.clients.monday_client import create_monday_update
+from app.clients.monday_client import parse_create_update_id
+from app.clients.monday_client import add_file_to_update
 from app.services.monday_service import verify_monday_request
 from app.services.monday_service import post_monday_comment
 from app.services.monday_service import get_monday_user_by_id
@@ -128,17 +131,7 @@ async def handle_status_webhook(request: Request, db: Session = Depends(get_db))
         )
 
         sent_any = any(item.get("status") == "sent" for item in result.get("results", []))
-        if sent_any:
-            try:
-                clear_file_column(board_id=board_id, item_id=item_id, column_id=col_id)
-            except Exception as exc:
-                logger.warning(
-                    "Monday webhook failed to clear file column item_id=%s column_id=%s error=%s",
-                    item_id,
-                    col_id,
-                    exc,
-                )
-        
+
         actor_name = (monday_user or {}).get("name") if isinstance(monday_user, dict) else None
         actor_label = actor_name or "Unknown user"
         total_addresses = result.get("total_addresses_found")
@@ -153,7 +146,36 @@ async def handle_status_webhook(request: Request, db: Session = Depends(get_db))
             f"{summary_line}\n"
             f"Document was added by user: {actor_label}."
         )
-        post_monday_comment(item_id, comment_message)
+
+        if sent_any:
+            upd_resp = create_monday_update(item_id, comment_message)
+            update_id = parse_create_update_id(upd_resp)
+            archived_ok = False
+            if update_id:
+                try:
+                    add_file_to_update(update_id, file_data["bytes"], doc_name)
+                    archived_ok = True
+                except Exception as exc:
+                    logger.warning(
+                        "Monday webhook failed to attach PDF to update item_id=%s update_id=%s error=%s",
+                        item_id,
+                        update_id,
+                        exc,
+                    )
+            if archived_ok:
+                try:
+                    clear_file_column(board_id=board_id, item_id=item_id, column_id=col_id)
+                except Exception as exc:
+                    logger.warning(
+                        "Monday webhook failed to clear file column item_id=%s column_id=%s error=%s",
+                        item_id,
+                        col_id,
+                        exc,
+                    )
+            elif not update_id:
+                post_monday_comment(item_id, comment_message)
+        else:
+            post_monday_comment(item_id, comment_message)
         
     #else:
         #print(f"DEBUG: Column {col_id} is empty for item {item_id}")

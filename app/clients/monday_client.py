@@ -99,6 +99,65 @@ def create_monday_update(item_id: int, body: str) -> dict:
 
     return response.json()
 
+
+def parse_create_update_id(response_json: dict) -> str | None:
+    """Returns the new update id from create_monday_update response, or None."""
+    try:
+        raw = response_json["data"]["create_update"]["id"]
+        return str(raw) if raw is not None else None
+    except (KeyError, TypeError):
+        return None
+
+
+def monday_file_upload_url() -> str:
+    base = (MONDAY_API_URL or "").rstrip("/")
+    return f"{base}/file"
+
+
+def add_file_to_update(update_id: int | str, file_bytes: bytes, file_name: str) -> dict:
+    """
+    Uploads a file and attaches it to an existing item update.
+    Uses Monday's /file multipart endpoint (GraphQL multipart spec).
+    See: https://developer.monday.com/api-reference/docs/file-column
+    """
+    if not update_id:
+        raise ValueError("Missing update_id")
+    if not file_bytes:
+        raise ValueError("Empty file bytes")
+
+    uid = str(update_id).strip()
+    if not uid:
+        raise ValueError("Invalid update_id")
+
+    query = """
+    mutation ($file: File!, $update_id: ID!) {
+      add_file_to_update(file: $file, update_id: $update_id) {
+        id
+      }
+    }
+    """
+    variables_json = json.dumps({"update_id": uid})
+    map_json = json.dumps({"file": "variables.file"})
+
+    upload_url = monday_file_upload_url()
+    multipart = {
+        "query": (None, query, "text/plain"),
+        "variables": (None, variables_json, "application/json"),
+        "map": (None, map_json, "application/json"),
+        "file": (file_name or "document.pdf", file_bytes, "application/pdf"),
+    }
+    headers = {
+        "Authorization": MONDAY_API_TOKEN,
+        "API-Version": "2024-01",
+    }
+    response = requests.post(upload_url, headers=headers, files=multipart, timeout=120)
+    response.raise_for_status()
+    data = response.json()
+    if data.get("errors"):
+        raise RuntimeError(str(data["errors"]))
+    return data
+
+
 def get_column_id_by_title(board_id: int, title: str) -> str:
     """
     Finds a column ID based on its display title.
