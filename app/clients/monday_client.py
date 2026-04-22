@@ -1,6 +1,49 @@
+import json
+
 import requests
 from fastapi import HTTPException
 from app.config import MONDAY_API_TOKEN, MONDAY_API_URL
+
+
+def _collect_asset_ids_from_file_value(raw_value: str) -> set[str]:
+    parsed_value = json.loads(raw_value)
+    asset_ids: set[str] = set()
+
+    # Some accounts return arrays under "files", others under "assets".
+    groups = []
+    if isinstance(parsed_value, dict):
+        groups.extend(
+            [
+                parsed_value.get("files"),
+                parsed_value.get("assets"),
+                parsed_value.get("asset_ids"),
+                parsed_value.get("ids"),
+            ]
+        )
+        groups.append([parsed_value])
+
+    for group in groups:
+        if not isinstance(group, list):
+            continue
+        for f in group:
+            if isinstance(f, (str, int)):
+                asset_ids.add(str(f))
+                continue
+            if not isinstance(f, dict):
+                continue
+
+            # Monday file payloads can vary by API version/account shape.
+            candidate_ids = [
+                f.get("assetId"),
+                f.get("asset_id"),
+                f.get("id"),
+                (f.get("asset") or {}).get("id") if isinstance(f.get("asset"), dict) else None,
+            ]
+            for cid in candidate_ids:
+                if cid is not None:
+                    asset_ids.add(str(cid))
+
+    return asset_ids
 
 
 def update_monday_item(item_id: int, values: dict) -> dict:
@@ -83,17 +126,21 @@ def get_column_id_by_title(board_id: int, title: str) -> str:
 
 def get_file_from_column(item_id: int, column_id: str) -> dict:
     """
-    Retrieves the file asset directly from the item's assets list.
+    Retrieves a file asset from a specific file column.
     """
     
     query = """
-    query ($itemId: [ID!]) {
+    query ($itemId: [ID!], $colId: [String!]) {
       items (ids: $itemId) {
         assets {
           id
           name
           public_url
           file_extension
+        }
+        column_values(ids: $colId) {
+          id
+          value
         }
       }
     }
@@ -110,25 +157,83 @@ def get_file_from_column(item_id: int, column_id: str) -> dict:
     data = response.json()
     
     if "errors" in data:
-        #print(f"DEBUG: GraphQL Errors: {data['errors']}")
         return None
     
     try:
-        assets = data["data"]["items"][0]["assets"]
+        item = data["data"]["items"][0]
+        assets = item.get("assets", [])
+        column_values = item.get("column_values", [])
         if not assets:
-            #print(f"DEBUG: No assets found for item {item_id}")
             return None
-        
-        target_asset = assets[0] 
+
+        if not column_values:
+            return None
+
+        raw_value = column_values[0].get("value")
+        if not raw_value:
+            return None
+
+        target_asset_ids = _collect_asset_ids_from_file_value(raw_value)
+        if not target_asset_ids:
+            return None
+
+        target_asset = next(
+            (asset for asset in assets if str(asset.get("id")) in target_asset_ids),
+            None,
+        )
+        if not target_asset:
+            return None
+
         file_name = target_asset["name"]
         download_url = target_asset["public_url"]
 
         file_response = requests.get(download_url)
         return {
             "name": file_name,
+            "file_extension": target_asset.get("file_extension"),
             "bytes": file_response.content
         }
 
-    except (KeyError, IndexError) as e:
-        #print(f"DEBUG: Error parsing assets: {str(e)}")
+    except (KeyError, IndexError, json.JSONDecodeError) as e:
         return None
+
+
+def clear_file_column(board_id: int, item_id: int, column_id: str) -> dict:
+    """
+    Clears all files from a specific Monday file column.
+    """
+    query = """
+    mutation ($boardId: ID!, $itemId: ID!, $columnId: String!, $value: JSON!) {
+      change_column_value(
+        board_id: $boardId,
+        item_id: $itemId,
+        column_id: $columnId,
+        value: $value
+      ) {
+        id
+      }
+    }
+    """
+
+    variables = {
+        "boardId": str(board_id),
+        "itemId": str(item_id),
+        "columnId": column_id,
+        "value": "{\"clear_all\": true}",
+    }
+    headers = {
+        "Authorization": MONDAY_API_TOKEN,
+        "Content-Type": "application/json",
+        "API-Version": "2024-01",
+    }
+
+    response = requests.post(
+        MONDAY_API_URL,
+        json={"query": query, "variables": variables},
+        headers=headers,
+    )
+    response.raise_for_status()
+    data = response.json()
+    if "errors" in data:
+        raise RuntimeError(str(data["errors"]))
+    return data

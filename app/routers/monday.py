@@ -11,6 +11,7 @@ from app.services.mailing_service import process_send_from_drive
 from app.services.mailing_service import create_letter_jobs_from_pdf_bytes
 from app.clients.monday_client import get_file_from_column
 from app.clients.monday_client import get_column_id_by_title
+from app.clients.monday_client import clear_file_column
 from app.services.monday_service import verify_monday_request
 from app.services.monday_service import post_monday_comment
 from app.services.monday_service import get_monday_user_by_id
@@ -18,6 +19,21 @@ from app.services.monday_service import get_monday_user_by_id
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/integrations/monday", tags=["Monday"])
+
+
+def _looks_like_pdf(file_data: dict) -> bool:
+    file_name = (file_data.get("name") or "").lower()
+    file_extension = (file_data.get("file_extension") or "").lower().strip(".")
+    payload = file_data.get("bytes") or b""
+
+    # Prefer magic-bytes check, then fall back to file metadata.
+    if isinstance(payload, (bytes, bytearray)) and payload.startswith(b"%PDF"):
+        return True
+    if file_name.endswith(".pdf"):
+        return True
+    if file_extension == "pdf":
+        return True
+    return False
 
 
 @router.post("/actions/send_from_drive")
@@ -88,6 +104,15 @@ async def handle_status_webhook(request: Request, db: Session = Depends(get_db))
         #print(f"DEBUG: No file found in column file_mm1gnvza for item {item_id}")
         return {"status": "no_file_found"}
 
+    if not _looks_like_pdf(file_data):
+        logger.warning(
+            "Monday webhook skipped non-PDF file item_id=%s file_name=%r file_extension=%r",
+            item_id,
+            file_data.get("name"),
+            file_data.get("file_extension"),
+        )
+        return {"status": "unsupported_file_type", "message": "Only PDF files are supported"}
+
     #print(f"DEBUG: Found file {file_data['name']}, starting Stannp process...")
 
     if file_data:
@@ -101,8 +126,26 @@ async def handle_status_webhook(request: Request, db: Session = Depends(get_db))
             current_user=default_user,
             save_pdf=False
         )
+
+        sent_any = any(item.get("status") == "sent" for item in result.get("results", []))
+        if sent_any:
+            try:
+                clear_file_column(board_id=board_id, item_id=item_id, column_id=col_id)
+            except Exception as exc:
+                logger.warning(
+                    "Monday webhook failed to clear file column item_id=%s column_id=%s error=%s",
+                    item_id,
+                    col_id,
+                    exc,
+                )
         
-        post_monday_comment(item_id, result.get("user_message", "Mailing processed."))
+        actor_name = (monday_user or {}).get("name") if isinstance(monday_user, dict) else None
+        actor_label = actor_name or "Unknown user"
+        comment_message = (
+            f"{result.get('user_message', 'Mailing processed.')}\n"
+            f"Document was added by user: {actor_label}."
+        )
+        post_monday_comment(item_id, comment_message)
         
     #else:
         #print(f"DEBUG: Column {col_id} is empty for item {item_id}")
