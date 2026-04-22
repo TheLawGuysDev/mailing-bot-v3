@@ -141,8 +141,16 @@ async def handle_status_webhook(request: Request, db: Session = Depends(get_db))
         
         actor_name = (monday_user or {}).get("name") if isinstance(monday_user, dict) else None
         actor_label = actor_name or "Unknown user"
+        total_addresses = result.get("total_addresses_found")
+        doc_name = file_data.get("name") or "uploaded.pdf"
+        if sent_any and total_addresses is not None:
+            summary_line = (
+                f"I found {total_addresses} address(es) in \"{doc_name}\" and successfully sent it to Stannp."
+            )
+        else:
+            summary_line = result.get("user_message", "Mailing processed.")
         comment_message = (
-            f"{result.get('user_message', 'Mailing processed.')}\n"
+            f"{summary_line}\n"
             f"Document was added by user: {actor_label}."
         )
         post_monday_comment(item_id, comment_message)
